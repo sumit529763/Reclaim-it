@@ -5,6 +5,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "src/main.jsx"],
   "exclude": ["node_modules", "dist"]
 }

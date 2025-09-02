@@ -1,0 +1,17 @@
+{
+  "sumit@yourcollege.ac.in": {
+    "name": "Sumit Naik",
+    "roll": "21BCA001",
+    "photo": "/students/sumit.jpg"
+  },
+  "ruchita@yourcollege.ac.in": {
+    "name": "Ruchita Patel",
+    "roll": "21BCA002",
+    "photo": "/students/ruchita.jpg"
+  },
+  "niharika@yourcollege.ac.in": {
+    "name": "Niharika Sen",
+    "roll": "21BCA003",
+    "photo": "/students/niharika.jpg"
+  }
+}
