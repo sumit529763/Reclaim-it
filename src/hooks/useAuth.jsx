@@ -14,53 +14,46 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const [profile, setProfile] = useState(null); // New state for profile data
 
+  // This useEffect handles the Firebase Auth state change only
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Fetch profile safely
-          let profile = await getStudent(firebaseUser.uid);
-
-          if (!profile) {
-            profile = {
-              name: firebaseUser.displayName || "Unnamed",
-              email: firebaseUser.email,
-              photoURL: firebaseUser.photoURL || null,
-            };
-            // Safely create profile
-            await createStudent(firebaseUser.uid, profile);
-          }
-
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            ...profile,
-          });
-        } catch (err) {
-          console.error("Firestore access error:", err);
-          // Optional: fallback user object without Firestore data
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-          });
-        }
-      } else {
-        setUser(null);
-      }
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setInitializing(false);
     });
 
     return () => unsub();
   }, []);
 
+  // This second useEffect handles fetching the student profile,
+  // running only when the user object is available and the profile hasn't been fetched yet.
+  useEffect(() => {
+    if (user && !profile) {
+      const fetchProfile = async () => {
+        try {
+          let studentProfile = await getStudent(user.uid);
+          if (!studentProfile) {
+            studentProfile = {
+              name: user.displayName || "Unnamed",
+              email: user.email,
+              photo: user.photoURL || null,
+            };
+            await createStudent(user.uid, studentProfile);
+          }
+          setProfile(studentProfile);
+        } catch (err) {
+          console.error("Firestore access error:", err);
+        }
+      };
+      fetchProfile();
+    }
+  }, [user, profile]);
+
   const value = useMemo(
     () => ({
-      user,
+      // Combine user and profile data for a complete user object
+      user: user ? { ...user, ...profile } : null,
       initializing,
       loginWithEmail: (email, password) =>
         signInWithEmailAndPassword(auth, email, password),
@@ -69,7 +62,7 @@ export function AuthProvider({ children }) {
       loginWithGoogle: () => signInWithPopup(auth, googleProvider),
       logout: () => signOut(auth),
     }),
-    [user, initializing]
+    [user, initializing, profile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,6 +2,8 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore"; // <-- add this
+import { getStorage } from "firebase/storage";
+
 
 // Read from Vite env vars (set these in your .env)
 const firebaseConfig = {
@@ -20,3 +22,4 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);   // <-- export db
 export const googleProvider = new GoogleAuthProvider();
+export const storage = getStorage(app);

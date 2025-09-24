@@ -1,35 +1,67 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
 import { Link } from "react-router-dom";
+import { getDashboardStats } from "../../../services/items.service";
+import { useAuth } from "../../../hooks/useAuth";
 
 export default function Dashboard() {
+  const { user, initializing } = useAuth();
+  const [stats, setStats] = useState({
+    reported: 0,
+    resolved: 0,
+    inReview: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!initializing && user) {
+      const fetchStats = async () => {
+        setLoading(true);
+        try {
+          const fetchedStats = await getDashboardStats(user.uid);
+          setStats(fetchedStats);
+        } catch (error) {
+          console.error("Error fetching dashboard stats:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchStats();
+    } else if (!initializing && !user) {
+      setLoading(false);
+    }
+  }, [user, initializing]);
+
   return (
     <DashboardLayout>
       {/* Dashboard Header */}
       <h2 className="text-2xl font-bold mb-6">Dashboard Overview</h2>
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6 rounded-xl shadow">
-          <h3 className="text-lg font-semibold">Items Reported</h3>
-          <p className="text-3xl font-bold mt-2">12</p>
-          <p className="text-sm mt-1 opacity-80">Total lost items you added</p>
-        </div>
+      {loading ? (
+        <p className="text-center text-lg mt-8">Loading stats...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6 rounded-xl shadow">
+            <h3 className="text-lg font-semibold">Items Reported</h3>
+            <p className="text-3xl font-bold mt-2">{stats.reported}</p>
+            <p className="text-sm mt-1 opacity-80">Total lost items you added</p>
+          </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-xl shadow">
-          <h3 className="text-lg font-semibold">Resolved</h3>
-          <p className="text-3xl font-bold mt-2">5</p>
-          <p className="text-sm mt-1 opacity-80">
-            Successfully matched & found
-          </p>
-        </div>
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-xl shadow">
+            <h3 className="text-lg font-semibold">Resolved</h3>
+            <p className="text-3xl font-bold mt-2">{stats.resolved}</p>
+            <p className="text-sm mt-1 opacity-80">
+              Successfully matched & found
+            </p>
+          </div>
 
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-xl shadow">
-          <h3 className="text-lg font-semibold">In Review</h3>
-          <p className="text-3xl font-bold mt-2">3</p>
-          <p className="text-sm mt-1 opacity-80">Pending confirmation</p>
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-xl shadow">
+            <h3 className="text-lg font-semibold">In Review</h3>
+            <p className="text-3xl font-bold mt-2">{stats.inReview}</p>
+            <p className="text-sm mt-1 opacity-80">Pending confirmation</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Actions */}
       <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>

@@ -1,26 +1,86 @@
-// src/features/items/pages/MyItems.jsx
-import React from "react";
+// src/features/items/pages/MyReports.jsx
+import React, { useEffect, useState } from "react";
+import DashboardLayout from "../../dashboard/layout/DashboardLayout";
+import { useAuth } from "../../../hooks/useAuth";
+import { getMyItems } from "../../../services/items.service";
 
-export default function MyItems() {
-  const items = [
-    { id: 1, name: "Wallet", status: "Lost", date: "2025-08-10" },
-    { id: 2, name: "Umbrella", status: "Found", date: "2025-08-12" },
-  ];
+export default function MyReports() {
+  const { user, initializing } = useAuth();
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!initializing && user) {
+      const fetchReports = async () => {
+        try {
+          const fetchedReports = await getMyItems(user.uid);
+          setReports(fetchedReports);
+        } catch (e) {
+          console.error("Failed to fetch reports:", e);
+          setError("Failed to load reports. Please try again.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchReports();
+    } else if (!initializing && !user) {
+      setLoading(false);
+    }
+  }, [user, initializing]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <p className="text-center text-lg mt-8">Loading your reports...</p>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <p className="text-center text-red-500 mt-8">{error}</p>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-xl font-bold mb-4">My Items</h1>
-      <ul className="space-y-2">
-        {items.map((it) => (
-          <li key={it.id} className="bg-white p-4 rounded shadow flex justify-between">
-            <div>
-              <p className="font-medium">{it.name}</p>
-              <p className="text-sm text-gray-500">{it.date}</p>
-            </div>
-            <span className="px-2 py-1 rounded text-white bg-gray-800 h-fit">{it.status}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <DashboardLayout>
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-xl font-bold mb-4">My Reports</h1>
+        {reports.length === 0 ? (
+          <p className="text-gray-500">You have not submitted any reports yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {reports.map((report) => (
+              <li
+                key={report.id}
+                className="bg-white p-4 rounded-xl shadow flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-4">
+                  {report.imageUrl && (
+                    <img
+                      src={report.imageUrl}
+                      alt={report.title}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                  )}
+                  <div>
+                    <p className="font-medium text-lg">{report.title}</p>
+                    <p className="text-sm text-gray-500">
+                      Type: {report.type}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Date: {new Date(report.createdAt?.toDate()).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

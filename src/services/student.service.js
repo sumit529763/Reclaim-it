@@ -1,6 +1,6 @@
-// src/services/studentService.js
+// src/services/student.service.js
 import { db } from "../lib/firebase/firebase";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /**
  * Get student profile from Firestore
@@ -42,17 +42,18 @@ export async function createStudent(uid, data) {
 }
 
 /**
- * Update student profile
+ * Update or create student profile
  * @param {string} uid - Firebase Auth user.uid
  * @param {object} data - fields to update
  */
 export async function updateStudent(uid, data) {
   try {
     const ref = doc(db, "students", uid);
-    await updateDoc(ref, {
+    await setDoc(ref, {
       ...data,
       updatedAt: new Date(),
-    });
+    }, { merge: true }); // Using setDoc with merge: true is more robust
+
     return true;
   } catch (err) {
     console.error("Error updating student:", err);

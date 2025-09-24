@@ -1,23 +1,69 @@
 // src/features/items/pages/ReportItem.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../dashboard/layout/DashboardLayout";
+import { useAuth } from "../../../hooks/useAuth";
+import { createItem } from "../../../services/items.service";
+import { uploadItemPhoto } from "../../../services/upload.service";
+import { Button } from "../../../components/common/button";
 
 export default function ReportItem() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [form, setForm] = useState({ type: "lost", title: "", description: "" });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitted:", form);
-    // later: send to backend (Firebase/DB)
+    if (!user) {
+      setError("You must be logged in to report an item.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let imageUrl = null;
+      if (imageFile) {
+        imageUrl = await uploadItemPhoto(imageFile);
+      }
+
+      await createItem({
+        ...form,
+        imageUrl: imageUrl,
+        ownerId: user.uid,
+      });
+      alert("Report submitted successfully!");
+      navigate("/dashboard/reports");
+    } catch (e) {
+      setError("Failed to submit report. Please try again.");
+      console.error("Submission error:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <DashboardLayout>
       <h2 className="text-2xl font-bold mb-6">Report Lost or Found Item</h2>
+      
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       <form
         onSubmit={handleSubmit}
@@ -65,13 +111,32 @@ export default function ReportItem() {
           />
         </div>
 
+        {/* Image Upload */}
+        <div className="mb-4">
+          <label className="block font-semibold mb-1">Image (Optional)</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="w-full border rounded p-2"
+          />
+          {imagePreview && (
+            <img 
+              src={imagePreview} 
+              alt="Image Preview" 
+              className="mt-4 rounded-xl max-h-48" 
+            />
+          )}
+        </div>
+
         {/* Submit */}
-        <button
+        <Button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="w-full"
+          disabled={loading}
         >
-          Submit Report
-        </button>
+          {loading ? "Submitting..." : "Submit Report"}
+        </Button>
       </form>
     </DashboardLayout>
   );
