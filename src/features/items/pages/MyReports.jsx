@@ -1,8 +1,8 @@
-// src/features/items/pages/MyReports.jsx
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../dashboard/layout/DashboardLayout";
 import { useAuth } from "../../../hooks/useAuth";
 import { getMyItems } from "../../../services/items.service";
+import { Link } from "react-router-dom"; // <-- Add this import
 
 export default function MyReports() {
   const { user, initializing } = useAuth();
@@ -56,26 +56,28 @@ export default function MyReports() {
             {reports.map((report) => (
               <li
                 key={report.id}
-                className="bg-white p-4 rounded-xl shadow flex items-center justify-between"
+                className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
               >
-                <div className="flex items-center space-x-4">
-                  {report.imageUrl && (
-                    <img
-                      src={report.imageUrl}
-                      alt={report.title}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                  )}
-                  <div>
-                    <p className="font-medium text-lg">{report.title}</p>
-                    <p className="text-sm text-gray-500">
-                      Type: {report.type}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Date: {new Date(report.createdAt?.toDate()).toLocaleDateString()}
-                    </p>
+                <Link to={`/item/${report.id}`} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    {report.imageUrl && (
+                      <img
+                        src={report.imageUrl}
+                        alt={report.title}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                    )}
+                    <div>
+                      <p className="font-medium text-lg">{report.title}</p>
+                      <p className="text-sm text-gray-500">
+                        Type: {report.type}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Date: {new Date(report.createdAt?.toDate()).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>

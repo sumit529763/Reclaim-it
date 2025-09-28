@@ -14,6 +14,7 @@ import Settings from "../features/dashboard/pages/Settings";
 
 import ReportItem from "../features/items/pages/ReportItem";
 import MyReports from "../features/items/pages/MyReports";
+import ItemDetails from "../features/items/pages/ItemDetails"; // <--- Add this import
 
 function ProtectedRoute({ children }) {
   const { user, initializing } = useAuth();
@@ -82,12 +83,21 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/dashboard/reports"
         element={
           <ProtectedRoute>
             <MyReports />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* The new dynamic route for item details */}
+      <Route
+        path="/item/:itemId"
+        element={
+          <ProtectedRoute>
+            <ItemDetails />
           </ProtectedRoute>
         }
       />
