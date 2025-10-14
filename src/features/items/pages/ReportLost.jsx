@@ -1,28 +1,94 @@
-// src/features/items/pages/ReportLost.jsx
+
 import React, { useState } from "react";
+import { createItem, uploadItemPhoto } from "../services/items.service";
 
 export default function ReportLost() {
-  const [form, setForm] = useState({ item: "", lastSeen: "", details: "" });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: send to Firestore later
-    alert(`Lost: ${JSON.stringify(form, null, 2)}`);
-    setForm({ item: "", lastSeen: "", details: "" });
+    setLoading(true);
+    setStatus("");
+
+    try {
+      let photoURL = null;
+
+      if (photo) {
+        // upload image to Firebase Storage
+        photoURL = await uploadItemPhoto(photo);
+      }
+
+      const itemData = {
+        name,
+        description,
+        location,
+        type: "lost", // 🔥 mark it as lost
+        photoURL,
+        createdAt: new Date(),
+      };
+
+      // use the same service layer as ReportItem.jsx
+      await createItem(itemData);
+
+      setStatus("Lost item reported successfully ✅");
+      setName("");
+      setDescription("");
+      setLocation("");
+      setPhoto(null);
+    } catch (err) {
+      console.error("Error reporting lost item:", err);
+      setStatus("Error reporting lost item ❌");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-lg mx-auto bg-white p-6 rounded shadow">
-      <h1 className="text-xl font-bold mb-4">Report Lost Item</h1>
-      <form onSubmit={submit} className="space-y-3">
-        <input className="w-full border p-2 rounded" placeholder="Item"
-               value={form.item} onChange={e=>setForm(s=>({...s, item:e.target.value}))}/>
-        <input className="w-full border p-2 rounded" placeholder="Last seen location"
-               value={form.lastSeen} onChange={e=>setForm(s=>({...s, lastSeen:e.target.value}))}/>
-        <textarea className="w-full border p-2 rounded" placeholder="Details"
-               value={form.details} onChange={e=>setForm(s=>({...s, details:e.target.value}))}/>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
+    <div className="max-w-md mx-auto p-6 bg-white shadow-lg rounded-lg">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Report Lost Item</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Item Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="w-full p-2 border rounded"
+        />
+        <textarea
+          placeholder="Item Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Last Seen Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          required
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="file"
+          onChange={(e) => setPhoto(e.target.files[0])}
+          className="w-full"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "Submitting..." : "Submit Lost Report"}
+        </button>
       </form>
+      {status && <p className="mt-3 text-center text-sm">{status}</p>}
     </div>
   );
 }

@@ -1,9 +1,49 @@
 import React, { useEffect, useState } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
 import { useAuth } from "../../../hooks/useAuth";
 import { getStudent, updateStudent } from "../../../services/student.service";
 import { getUserActivities } from "../../../services/activity.service";
-import { User, Edit, List } from "lucide-react";
+import {
+  User,
+  Edit,
+  List,
+  Mail,
+  Phone,
+  MapPin,
+  Loader2,
+  Calendar,
+} from "lucide-react";
+
+// --- Helper to generate default letter avatar ---
+const generateDefaultAvatar = (name) => {
+  const firstLetter = (name || "A")[0].toUpperCase();
+  // Dynamic UI avatars URL, no broken link
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    name || "A"
+  )}&size=128&background=random&color=fff&rounded=true`;
+};
+
+// --- Helper Component for Displaying Info Fields ---
+const ProfileInfoField = ({ label, value, icon: Icon, isLoading }) => (
+  <div className="flex items-start space-x-3 text-gray-700">
+    <Icon size={18} className="text-blue-500 mt-1 flex-shrink-0" />
+    <div>
+      <span className="font-medium text-gray-500 text-sm">{label}</span>
+      {isLoading ? (
+        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mt-1"></div>
+      ) : (
+        <p className="text-base font-semibold">{value || "N/A"}</p>
+      )}
+    </div>
+  </div>
+);
+
+// --- Activity List Item Component ---
+const ActivityItem = ({ message, date }) => (
+  <li className="flex justify-between items-center py-2 border-b last:border-b-0">
+    <span className="text-gray-700">{message}</span>
+    <span className="text-sm text-gray-400">{date || "recently"}</span>
+  </li>
+);
 
 export default function Profile() {
   const { user, initializing } = useAuth();
@@ -11,18 +51,16 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("info");
   const [activities, setActivities] = useState([]);
-
   const [isSaving, setIsSaving] = useState(false);
-
-  // Form data for edit
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     gender: "",
     address: "",
+    photo: "",
   });
 
-  // Load student data and activities
+  // --- Fetch user and activities ---
   useEffect(() => {
     let isMounted = true;
     if (!initializing && user) {
@@ -31,6 +69,12 @@ export default function Profile() {
         try {
           const studentData = await getStudent(user.uid);
           const userActivities = await getUserActivities(user.uid);
+
+          // Use dynamic avatar if no photo
+          if (studentData && !studentData.photo) {
+            studentData.photo = generateDefaultAvatar(studentData.name);
+          }
+
           if (isMounted) {
             setStudent(studentData);
             setActivities(userActivities);
@@ -40,15 +84,15 @@ export default function Profile() {
                 phone: studentData.phone || "",
                 gender: studentData.gender || "",
                 address: studentData.address || "",
+                photo:
+                  studentData.photo || generateDefaultAvatar(studentData.name),
               });
             }
           }
         } catch (error) {
           console.error("Failed to fetch profile data:", error);
         } finally {
-          if (isMounted) {
-            setLoading(false);
-          }
+          if (isMounted) setLoading(false);
         }
       };
       fetchProfileData();
@@ -64,6 +108,32 @@ export default function Profile() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // --- Handle Image Upload to Cloudinary ---
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", "unsigned_profile_upload");
+
+    try {
+      setIsSaving(true);
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/dydfb3rbt/upload`,
+        { method: "POST", body: form }
+      );
+      const data = await res.json();
+      if (data.secure_url) {
+        setFormData((prev) => ({ ...prev, photo: data.secure_url }));
+      }
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- Save updated profile data to Firestore ---
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -71,162 +141,218 @@ export default function Profile() {
       await updateStudent(user.uid, formData);
       setStudent((prev) => ({ ...prev, ...formData }));
       setActiveTab("info");
-      alert("Profile updated!");
+      console.log("Profile updated successfully!");
     } catch (err) {
-      alert("Error updating profile: " + err.message);
+      console.error("Error updating profile:", err.message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (!user) {
+  if (initializing) {
     return (
-      <DashboardLayout>
-        <p>Please log in to see your profile.</p>
-      </DashboardLayout>
+      <div className="flex items-center justify-center p-8 h-64">
+        <Loader2 className="animate-spin text-blue-500 mr-2" size={32} />
+        <p className="text-xl text-gray-600">Initializing user session...</p>
+      </div>
     );
   }
 
-  if (loading) {
+  if (!user) {
     return (
-      <DashboardLayout>
-        <p>Loading profile...</p>
-      </DashboardLayout>
+      <p className="p-6 text-xl font-semibold text-red-600">
+        Please log in to view your profile.
+      </p>
     );
   }
 
   return (
-    <DashboardLayout>
-      <h2 className="text-2xl font-bold mb-6">My Profile</h2>
+    <>
+      <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">
+        User Profile
+      </h1>
 
-      <div className="bg-white shadow-lg rounded-xl p-6 max-w-2xl">
+      <div className="bg-white shadow-xl rounded-xl overflow-hidden max-w-4xl">
         {/* Profile Header */}
-        <div className="flex items-center space-x-4 border-b pb-4 mb-4">
+        <div className="p-6 border-b bg-gray-50 flex flex-col sm:flex-row items-center space-x-6">
           <img
-            src={student?.photo || "/default-avatar.png"}
-            alt={student?.name}
-            onError={(e) => (e.target.src = "/default-avatar.png")}
-            className="w-20 h-20 rounded-full border"
+            src={formData.photo || generateDefaultAvatar(formData.name)}
+            alt={formData.name || "Anonymous"}
+            onError={(e) =>
+              (e.target.src = generateDefaultAvatar(formData.name))
+            }
+            className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover"
           />
-
           <div>
-            <h3 className="text-xl font-semibold">{student?.name}</h3>
-            <p className="text-gray-600">Roll No: {student?.roll || "N/A"}</p>
-            <p className="text-sm text-gray-500">{user.email}</p>
+            {loading ? (
+              <div className="space-y-2">
+                <div className="h-6 w-56 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {student?.name || "Anonymous User"}
+                </h2>
+                <p className="text-blue-600 font-medium">
+                  Roll No: {student?.roll || "N/A"}
+                </p>
+                <p className="text-gray-500 flex items-center mt-1">
+                  <Mail size={16} className="mr-2" />
+                  {user.email}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-6 border-b mb-4">
-          {[
-            { id: "info", label: "Profile Info", icon: <User size={18} /> },
-            { id: "edit", label: "Edit", icon: <Edit size={18} /> },
-            { id: "activity", label: "Activity", icon: <List size={18} /> },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`pb-2 flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? "border-b-2 border-blue-600 font-semibold text-blue-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === "info" && (
-          <div className="space-y-2">
-            <p>
-              <span className="font-semibold">Department:</span>{" "}
-              {student?.department || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Year:</span>{" "}
-              {student?.year || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Phone:</span>{" "}
-              {student?.phone || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Gender:</span>{" "}
-              {student?.gender || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Address:</span>{" "}
-              {student?.address || "N/A"}
-            </p>
+        <div className="p-6">
+          <div className="flex space-x-6 border-b pb-4 mb-6">
+            {[
+              { id: "info", label: "Profile Info", icon: User },
+              { id: "edit", label: "Edit Profile", icon: Edit },
+              { id: "activity", label: "Recent Activity", icon: List },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                className={`pb-2 flex items-center gap-2 transition duration-150 ease-in-out ${
+                  activeTab === tab.id
+                    ? "border-b-2 border-blue-600 font-bold text-blue-600"
+                    : "text-gray-500 hover:text-blue-600"
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <tab.icon size={18} /> {tab.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        {activeTab === "edit" && (
-          <form onSubmit={handleSave} className="space-y-3">
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Name"
-            />
-            <input
-              type="text"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Phone"
-            />
-            <input
-              type="text"
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Gender"
-            />
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Address"
-            />
+          <div className="pt-4">
+            {/* Profile Info */}
+            {activeTab === "info" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ProfileInfoField
+                  label="Department"
+                  value={student?.department}
+                  icon={List}
+                  isLoading={loading}
+                />
+                <ProfileInfoField
+                  label="Current Year"
+                  value={student?.year}
+                  icon={Calendar}
+                  isLoading={loading}
+                />
+                <ProfileInfoField
+                  label="Phone Number"
+                  value={student?.phone}
+                  icon={Phone}
+                  isLoading={loading}
+                />
+                <ProfileInfoField
+                  label="Gender"
+                  value={student?.gender}
+                  icon={User}
+                  isLoading={loading}
+                />
+                <div className="md:col-span-2">
+                  <ProfileInfoField
+                    label="Address"
+                    value={student?.address}
+                    icon={MapPin}
+                    isLoading={loading}
+                  />
+                </div>
+              </div>
+            )}
 
-            <button
-              type="submit"
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </form>
-        )}
+            {/* Edit Profile */}
+            {activeTab === "edit" && (
+              <form onSubmit={handleSave} className="space-y-4">
+                <label className="block">
+                  <span className="text-gray-700">Profile Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="mt-1 block w-full"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-gray-700">Full Name</span>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Your Name"
+                    autoComplete="name"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-gray-700">Phone Number</span>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Phone"
+                    autoComplete="tel"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-gray-700">Gender</span>
+                  <input
+                    type="text"
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Gender"
+                    autoComplete="sex"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-gray-700">Address</span>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Address"
+                    autoComplete="street-address"
+                  />
+                </label>
 
-        {activeTab === "activity" && (
-          <div className="space-y-2 text-gray-600">
-            {activities.length > 0 ? (
-              <ul className="list-disc list-inside">
-                {activities.map((a, i) => (
-                  <li key={i}>
-                    {a.message}{" "}
-                    <span className="text-sm text-gray-400">
-                      ({a.date || "recently"})
-                    </span>
-                  </li>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-3 mt-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Profile"}
+                </button>
+              </form>
+            )}
+
+            {/* Recent Activity */}
+            {activeTab === "activity" && (
+              <ul className="divide-y divide-gray-200">
+                {activities.length === 0 && (
+                  <p className="text-gray-500">No recent activity</p>
+                )}
+                {activities.map((act, idx) => (
+                  <ActivityItem key={idx} message={act.message} date={act.date} />
                 ))}
               </ul>
-            ) : (
-              <p>No recent activity.</p>
             )}
           </div>
-        )}
+        </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

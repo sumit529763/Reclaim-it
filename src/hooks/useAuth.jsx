@@ -1,3 +1,4 @@
+// src/hooks/useAuth.jsx
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   onAuthStateChanged,
@@ -12,11 +13,11 @@ import { getStudent, createStudent } from "../services/student.service";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);       // Firebase User object
   const [initializing, setInitializing] = useState(true);
-  const [profile, setProfile] = useState(null); // New state for profile data
+  const [profile, setProfile] = useState(null); // Firestore profile data
 
-  // This useEffect handles the Firebase Auth state change only
+  // Listen to Firebase auth state
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -26,8 +27,7 @@ export function AuthProvider({ children }) {
     return () => unsub();
   }, []);
 
-  // This second useEffect handles fetching the student profile,
-  // running only when the user object is available and the profile hasn't been fetched yet.
+  // Fetch Firestore profile once Firebase user is available
   useEffect(() => {
     if (user && !profile) {
       const fetchProfile = async () => {
@@ -52,8 +52,8 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      // Combine user and profile data for a complete user object
-      user: user ? { ...user, ...profile } : null,
+      user,            // Keep Firebase User object intact
+      profile,         // Firestore profile
       initializing,
       loginWithEmail: (email, password) =>
         signInWithEmailAndPassword(auth, email, password),

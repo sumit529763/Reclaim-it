@@ -14,7 +14,9 @@ import Settings from "../features/dashboard/pages/Settings";
 
 import ReportItem from "../features/items/pages/ReportItem";
 import MyReports from "../features/items/pages/MyReports";
-import ItemDetails from "../features/items/pages/ItemDetails"; // <--- Add this import
+import ItemDetails from "../features/items/pages/ItemDetails";
+import LostItemsList from "../features/items/pages/LostItemsList";
+import FoundItemsList from "../features/items/pages/FoundItemsList";
 
 function ProtectedRoute({ children }) {
   const { user, initializing } = useAuth();
@@ -31,8 +33,8 @@ function PublicOnlyRoute({ children }) {
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<Home />} />
-
       <Route
         path="/login"
         element={
@@ -50,7 +52,7 @@ export default function AppRoutes() {
         }
       />
 
-      {/* Dashboard and nested routes */}
+      {/* Protected Dashboard Routes with Nested Routing */}
       <Route
         path="/dashboard"
         element={
@@ -58,41 +60,17 @@ export default function AppRoutes() {
             <Dashboard />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/dashboard/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/report"
-        element={
-          <ProtectedRoute>
-            <ReportItem />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/reports"
-        element={
-          <ProtectedRoute>
-            <MyReports />
-          </ProtectedRoute>
-        }
-      />
+      >
+        {/* Nested Dashboard Pages */}
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="report" element={<ReportItem />} />
+        <Route path="reports" element={<MyReports />} />
+        <Route path="lost" element={<LostItemsList />} />
+        <Route path="found" element={<FoundItemsList />} />
+      </Route>
 
-      {/* The new dynamic route for item details */}
+      {/* Protected Dynamic Item Details Route */}
       <Route
         path="/item/:itemId"
         element={
@@ -102,6 +80,7 @@ export default function AppRoutes() {
         }
       />
 
+      {/* Fallback for Unknown Routes */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

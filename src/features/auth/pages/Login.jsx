@@ -55,6 +55,7 @@ export default function Login() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
         />
         <input
           className="w-full border rounded px-3 py-2"
@@ -62,6 +63,7 @@ export default function Login() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
         <button className="w-full rounded bg-black text-white py-2">
           Continue
