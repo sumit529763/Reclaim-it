@@ -1,4 +1,5 @@
 // src/hooks/useAuth.jsx
+
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   onAuthStateChanged,
@@ -13,48 +14,76 @@ import { getStudent, createStudent } from "../services/student.service";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);       // Firebase User object
+  const [user, setUser] = useState(null); 
   const [initializing, setInitializing] = useState(true);
-  const [profile, setProfile] = useState(null); // Firestore profile data
+  const [profile, setProfile] = useState(null); 
+  const [profileLoading, setProfileLoading] = useState(false); 
 
-  // Listen to Firebase auth state
+  // 1. Listen to Firebase auth state
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setInitializing(false);
+      
+      if (!firebaseUser) {
+        setProfile(null);
+      }
     });
 
     return () => unsub();
   }, []);
 
-  // Fetch Firestore profile once Firebase user is available
+  // 2. Fetch Firestore profile once Firebase user is available (MODIFIED AND FIXED)
   useEffect(() => {
-    if (user && !profile) {
+    if (user && !profile && !profileLoading) { 
       const fetchProfile = async () => {
+        setProfileLoading(true);
         try {
           let studentProfile = await getStudent(user.uid);
+          
           if (!studentProfile) {
-            studentProfile = {
+            // New user case: create the profile
+            const newProfileData = {
               name: user.displayName || "Unnamed",
               email: user.email,
               photo: user.photoURL || null,
             };
-            await createStudent(user.uid, studentProfile);
+            
+            // 🔑 FIX APPLIED: Capture the data returned by createStudent directly
+            studentProfile = await createStudent(user.uid, newProfileData); 
+            
+            // NOTE: The previous redundant getStudent call is now correctly removed.
           }
-          setProfile(studentProfile);
+          
+          if (studentProfile) {
+            setProfile(studentProfile);
+          }
         } catch (err) {
           console.error("Firestore access error:", err);
+        } finally {
+          setProfileLoading(false);
         }
       };
       fetchProfile();
     }
-  }, [user, profile]);
+
+  }, [user, profile, profileLoading]);
+
+  // 3. Derived State for Admin Check (No change, remains correct)
+  const isAdmin = useMemo(() => {
+    return !!profile && profile.role === 'admin'; 
+  }, [profile]);
+  // ----------------------------------------------------
 
   const value = useMemo(
     () => ({
-      user,            // Keep Firebase User object intact
-      profile,         // Firestore profile
+      user, 
+      profile, 
       initializing,
+      profileLoading, 
+      isAdmin,        
+      
+      // Auth methods (no change)
       loginWithEmail: (email, password) =>
         signInWithEmailAndPassword(auth, email, password),
       signupWithEmail: (email, password) =>
@@ -62,7 +91,7 @@ export function AuthProvider({ children }) {
       loginWithGoogle: () => signInWithPopup(auth, googleProvider),
       logout: () => signOut(auth),
     }),
-    [user, initializing, profile]
+    [user, initializing, profile, profileLoading, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

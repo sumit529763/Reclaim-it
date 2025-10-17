@@ -1,3 +1,5 @@
+// src/features/dashboard/pages/Profile.jsx
+
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import { getStudent, updateStudent } from "../../../services/student.service";
@@ -16,7 +18,7 @@ import {
 // --- Helper to generate default letter avatar ---
 const generateDefaultAvatar = (name) => {
   const firstLetter = (name || "A")[0].toUpperCase();
-  // Dynamic UI avatars URL, no broken link
+  // Dynamic UI avatars URL
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
     name || "A"
   )}&size=128&background=random&color=fff&rounded=true`;
@@ -67,8 +69,11 @@ export default function Profile() {
       setLoading(true);
       const fetchProfileData = async () => {
         try {
-          const studentData = await getStudent(user.uid);
-          const userActivities = await getUserActivities(user.uid);
+          // Fetch student data and activities concurrently
+          const [studentData, userActivities] = await Promise.all([
+            getStudent(user.uid),
+            getUserActivities(user.uid),
+          ]);
 
           // Use dynamic avatar if no photo
           if (studentData && !studentData.photo) {
@@ -108,26 +113,40 @@ export default function Profile() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // --- Handle Image Upload to Cloudinary ---
+  // --- Handle Image Upload to Cloudinary (FIXED to use ENV VARS) ---
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // 🔑 CRITICAL FIX: Use environment variables for Cloudinary configuration
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_PROFILE_PRESET; // Assuming a profile preset
+
+    if (!cloudName || !uploadPreset) {
+      alert("Cloudinary configuration missing. Check your .env file.");
+      return;
+    }
+
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
     const form = new FormData();
     form.append("file", file);
-    form.append("upload_preset", "unsigned_profile_upload");
+    form.append("upload_preset", uploadPreset);
 
     try {
       setIsSaving(true);
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/dydfb3rbt/upload`,
-        { method: "POST", body: form }
-      );
+      const res = await fetch(url, { method: "POST", body: form });
       const data = await res.json();
+
       if (data.secure_url) {
+        // Update the photo in the local formData state
         setFormData((prev) => ({ ...prev, photo: data.secure_url }));
+        alert("Photo uploaded successfully! Click 'Save Profile' to finalize the change.");
+      } else {
+        throw new Error(data.error?.message || "Cloudinary upload error.");
       }
     } catch (err) {
       console.error("Photo upload failed:", err);
+      alert(`Photo upload failed: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -139,16 +158,19 @@ export default function Profile() {
     setIsSaving(true);
     try {
       await updateStudent(user.uid, formData);
+      // Update the main student state and revert to info tab
       setStudent((prev) => ({ ...prev, ...formData }));
       setActiveTab("info");
-      console.log("Profile updated successfully!");
+      alert("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err.message);
+      alert(`Error updating profile: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // --- Initializing/Error States (REMAINS UNCHANGED) ---
   if (initializing) {
     return (
       <div className="flex items-center justify-center p-8 h-64">
@@ -165,7 +187,8 @@ export default function Profile() {
       </p>
     );
   }
-
+  
+  // --- Main Render (REMAINS UNCHANGED, using current state) ---
   return (
     <>
       <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">

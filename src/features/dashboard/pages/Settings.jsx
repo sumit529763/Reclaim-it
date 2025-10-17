@@ -1,4 +1,5 @@
 // src/features/dashboard/pages/Settings.jsx
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import {
@@ -8,6 +9,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
+import { updateStudent } from "../../../services/student.service"; // 🔑 NEW: Import for Firestore profile sync
 
 export default function Settings() {
   const { user, profile } = useAuth(); // Firebase User + Firestore profile
@@ -73,19 +75,28 @@ export default function Settings() {
         await reauthenticateWithCredential(user, credential);
       }
 
-      // Update displayName
+      let profileUpdateNeeded = false; // Flag for Firestore update
+
+      // Update displayName in Firebase Auth
       if (displayName !== user.displayName) {
         await updateProfile(user, { displayName });
+        profileUpdateNeeded = true; // Mark for Firestore update
       }
 
-      // Update email
+      // Update email in Firebase Auth
       if (email !== user.email) {
         await updateEmail(user, email);
       }
 
-      // Update password
+      // Update password in Firebase Auth
       if (newPassword) {
         await updatePassword(user, newPassword);
+      }
+      
+      // 🔑 CRITICAL FIX: Sync Firestore Profile
+      if (profileUpdateNeeded) {
+          // Update the 'name' field in the 'students' collection to keep it synchronized
+          await updateStudent(user.uid, { name: displayName }); 
       }
 
       setMessage("Profile updated successfully!");
@@ -140,7 +151,7 @@ export default function Settings() {
           )}
         </div>
 
-        {/* Current Password */}
+        {/* Current Password (Required for changes) */}
         {(email !== user?.email || newPassword) && (
           <div>
             <label className="block text-gray-700 font-medium mb-1">Current Password</label>

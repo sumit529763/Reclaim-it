@@ -1,4 +1,5 @@
 // src/services/student.service.js
+
 import { db } from "../lib/firebase/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -18,26 +19,35 @@ export async function getStudent(uid) {
     }
   } catch (err) {
     console.error("Error fetching student:", err);
-    return null; // fallback if permission denied
+    return null; 
   }
 }
 
 /**
  * Create student profile if not exists
+ * * 🔑 FIX: Now returns the created profile data object instead of just 'true'.
  * @param {string} uid - Firebase Auth user.uid
  * @param {object} data - Student info { name, email, photoURL }
  */
 export async function createStudent(uid, data) {
   try {
     const ref = doc(db, "students", uid);
-    await setDoc(ref, {
+    
+    // Create the final data object, including the default role
+    const newProfile = {
       ...data,
+      role: "user", // <-- Default role remains
       createdAt: new Date(),
-    });
-    return true;
+    };
+
+    await setDoc(ref, newProfile);
+    
+    // FIX APPLIED: Return the full, newly created profile
+    return newProfile; 
+    
   } catch (err) {
     console.error("Error creating student:", err);
-    return false; // fail gracefully
+    return null; // Return null on failure
   }
 }
 
@@ -52,7 +62,7 @@ export async function updateStudent(uid, data) {
     await setDoc(ref, {
       ...data,
       updatedAt: new Date(),
-    }, { merge: true }); // Using setDoc with merge: true is more robust
+    }, { merge: true }); // Using setDoc with merge: true for partial updates
 
     return true;
   } catch (err) {
