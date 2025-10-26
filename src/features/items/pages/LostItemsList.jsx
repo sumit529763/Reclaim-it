@@ -1,10 +1,27 @@
-// src/features/items/pages/LostItemsList.jsx (FINAL VERSION)
+// src/features/items/pages/LostItemsList.jsx (UPDATED - GIETU CAMPUS LOCATIONS)
 
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom"; 
 import { getLostItems } from "../../../services/items.service"; 
 import ItemCard from "../components/ItemCard"; 
 import ItemFilter from "../components/ItemFilter"; 
+
+// 🔑 DEFINITION OF GIET UNIVERSITY CAMPUS LOCATIONS
+// This array will populate the "Location Found" dropdown menu.
+const GIETU_LOCATION_OPTIONS = [
+    { value: 'all', label: 'All Campus Locations' },
+    { value: 'admin_block', label: 'Administration Block' },
+    { value: 'cse_building', label: 'CSE Department Building' },
+    { value: 'central_library', label: 'Central Library' },
+    { value: 'mega_auditorium', label: 'Mega Auditorium' },
+    { value: 'central_mess', label: 'Central Mess / Canteen' },
+    { value: 'sbi_atm', label: 'SBI ATM & Bank Branch' },
+    { value: 'sports_complex', label: 'Sports Complex / Gym' },
+    { value: 'boys_hostel_gietu', label: 'Boys Hostel Area' },
+    { value: 'Other', label: 'Other' },
+    // Add any other key location specific to GIETU here (e.g., ECE, Civil block, etc.)
+];
+
 
 // Local Client-Side Filtering Function (remains unchanged)
 const filterItems = (items, filters) => {
@@ -17,7 +34,7 @@ const filterItems = (items, filters) => {
         // 2. Category Filter
         const matchesCategory = filters.category === 'all' || item.category === filters.category;
 
-        // 3. Location Filter
+        // 3. Location Filter (uses the value field from GIETU_LOCATION_OPTIONS for filtering)
         const matchesLocation = filters.location === 'all' || item.location === filters.location;
 
         return matchesSearch && matchesCategory && matchesLocation;
@@ -63,7 +80,7 @@ export default function LostItemsList() {
     if (loading) {
         return (
             <div className="p-8 text-center text-indigo-600 font-semibold">
-                Loading Lost Items... 🔎
+                Loading Lost Items 🔎
             </div>
         );
     }
@@ -71,13 +88,15 @@ export default function LostItemsList() {
     return (
         <div className="p-8">
             <h2 className="text-3xl font-extrabold mb-6 text-red-600">
-                Lost Items on Campus 😔
+                Lost Items On Campus 😔
             </h2>
             
+            {/* 🔑 CRITICAL CHANGE: Pass the new campus location options to the ItemFilter */}
             <ItemFilter 
                 filters={filters} 
                 onFilterChange={handleFilterChange} 
                 listType="lost" 
+                locationOptions={GIETU_LOCATION_OPTIONS} // <--- Added the specific location data
             />
 
             <div className="mt-8">
@@ -90,7 +109,7 @@ export default function LostItemsList() {
                         
                         {/* 🔑 FINAL LINK: User should report what they found, not claim the lost item */}
                         <p className="mt-4 text-base">
-                            <span className="font-semibold text-gray-700">Found an item matching this list? </span>
+                            <span className="font-semibold text-gray-700">Found an item matching this list? </span>
                             <Link to="/dashboard/report" className="text-blue-600 underline hover:text-blue-800 font-semibold">
                                 Report it as Found!
                             </Link>

@@ -1,4 +1,4 @@
-// src/services/items.service.js (FINAL, INDEX-OPTIMIZED VERSION)
+// src/services/items.service.js (FINAL & COMPLETE)
 
 import { db } from "../lib/firebase/firebase";
 import {
@@ -11,6 +11,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  deleteDoc, // 🔑 ADDED: Import deleteDoc
   orderBy,
 } from "firebase/firestore";
 
@@ -29,39 +30,39 @@ export async function getMyItems(userId) {
   // Fetches all items reported by the user, regardless of status
   const q = query(itemsRef, where("ownerId", "==", userId), orderBy("createdAt", "desc"));
   try {
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  } catch (error) {
-      console.error("Error fetching my items:", error);
-      return [];
-  }
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+      console.error("Error fetching my items:", error);
+      return [];
+  }
 }
 
 export async function getDashboardStats(userId) {
   // Used for the dashboard overview cards
   const q = query(itemsRef, where("ownerId", "==", userId));
-  try {
-      const snap = await getDocs(q);
-      const reportedCount = snap.docs.length;
-      let resolvedCount = 0;
-      let inReviewCount = 0;
-      snap.docs.forEach((doc) => {
-        const data = doc.data();
-        if (data.status === "resolved") {
-          resolvedCount++;
-        } else if (data.status === "in_review") {
-          inReviewCount++;
-        }
-      });
-      return {
-        reported: reportedCount,
-        resolved: resolvedCount,
-        inReview: inReviewCount,
-      };
-  } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      return { reported: 0, resolved: 0, inReview: 0 };
-  }
+  try {
+      const snap = await getDocs(q);
+      const reportedCount = snap.docs.length;
+      let resolvedCount = 0;
+      let inReviewCount = 0;
+      snap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.status === "resolved") {
+          resolvedCount++;
+        } else if (data.status === "in_review") {
+          inReviewCount++;
+        }
+      });
+      return {
+        reported: reportedCount,
+        resolved: resolvedCount,
+        inReview: inReviewCount,
+      };
+  } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      return { reported: 0, resolved: 0, inReview: 0 };
+  }
 }
 
 export async function getItem(itemId) {
@@ -95,8 +96,22 @@ export async function updateItemStatus(itemId, newStatus) {
 }
 
 /**
- * Admin function to retrieve items matching a specific status (e.g., for review queues).
+ * Admin function to permanently delete an item document.
  */
+export async function deleteItem(itemId) {
+    try {
+        const itemRef = doc(db, "items", itemId);
+        await deleteDoc(itemRef);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting item ${itemId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Admin function to retrieve items matching a specific status (e.g., for review queues).
+ */
 export async function getItemsByStatusForAdmin(statusFilter) {
   try {
     const q = query(
@@ -114,49 +129,39 @@ export async function getItemsByStatusForAdmin(statusFilter) {
 
 
 /**
- * Public facing function to fetch only verified Lost Items.
- * CRITICAL FIX: Explicitly filters by status to be index-compatible and security-compliant.
- */
+ * Public facing function to fetch only verified Lost Items.
+ */
 export async function getLostItems() {
   const q = query(
     itemsRef,
-    // 1. Filter by status (must be listed first in the index)
-    where("status", "==", "active_lost"), 
-    // 2. Filter by type (must be listed second in the index)
+    where("status", "==", "active_lost"), 
     where("type", "==", "lost"),
-    // 3. Order by date (must be listed last in the index)
     orderBy("createdAt", "desc")
   );
   try {
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  } catch (error) {
-      console.error("Error fetching lost items:", error);
-      // NOTE: The Firebase Console link for index creation will appear here if it fails!
-      return []; 
-  }
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+      console.error("Error fetching lost items:", error);
+      return []; 
+  }
 }
 
 /**
- * Public facing function to fetch only verified Found Items.
- * CRITICAL FIX: Explicitly filters by status to be index-compatible and security-compliant.
- */
+ * Public facing function to fetch only verified Found Items.
+ */
 export async function getFoundItems() {
   const q = query(
     itemsRef,
-    // 1. Filter by status
-    where("status", "==", "active_found"), 
-    // 2. Filter by type
+    where("status", "==", "active_found"), 
     where("type", "==", "found"),
-    // 3. Order by date
     orderBy("createdAt", "desc")
   );
   try {
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  } catch (error) {
-      console.error("Error fetching found items:", error);
-      // NOTE: The Firebase Console link for index creation will appear here if it fails!
-      return []; 
-  }
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+      console.error("Error fetching found items:", error);
+      return []; 
+  }
 }

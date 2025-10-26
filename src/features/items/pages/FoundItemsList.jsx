@@ -1,4 +1,4 @@
-// src/features/items/pages/FoundItemsList.jsx (FINAL VERSION)
+// src/features/items/pages/FoundItemsList.jsx (FINAL CORRECTED VERSION for GIETU)
 
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom"; 
@@ -6,12 +6,28 @@ import { getFoundItems } from "../../../services/items.service";
 import ItemCard from "../components/ItemCard";
 import ItemFilter from "../components/ItemFilter";
 
+// 🔑 DEFINITION OF GIET UNIVERSITY CAMPUS LOCATIONS
+// This array will populate the "Location Found" dropdown menu in the ItemFilter component.
+const GIETU_LOCATION_OPTIONS = [
+    { value: 'all', label: 'All Campus Locations' },
+    { value: 'admin_block', label: 'Administration Block' },
+    { value: 'cse_building', label: 'CSE Department Building' },
+    { value: 'central_library', label: 'Central Library' },
+    { value: 'mega_auditorium', label: 'Mega Auditorium' },
+    { value: 'central_mess', label: 'Central Mess / Canteen' },
+    { value: 'sbi_atm', label: 'SBI ATM & Bank Branch' },
+    { value: 'sports_complex', label: 'Sports Complex / Gym' },
+    { value: 'boys_hostel_gietu', label: 'Boys Hostel Area' },
+    { value: 'Other', label: 'Other' },
+];
+
+
 // Local Client-Side Filtering Function (remains unchanged)
 const filterItems = (items, filters) => {
     return items.filter(item => {
         const matchesSearch = filters.search.toLowerCase() === '' || 
                               item.title.toLowerCase().includes(filters.search.toLowerCase()) || 
-                              item.description.toLowerCase().includes(filters.search.toLowerCase());
+                              item.description.toLowerCase().includes(filters.description.toLowerCase());
         const matchesCategory = filters.category === 'all' || item.category === filters.category;
         const matchesLocation = filters.location === 'all' || item.location === filters.location;
         return matchesSearch && matchesCategory && matchesLocation;
@@ -22,6 +38,7 @@ const filterItems = (items, filters) => {
 export default function FoundItemsList() {
     const [allActiveItems, setAllActiveItems] = useState([]);
     const [displayedItems, setDisplayedItems] = useState([]);
+    // FIX APPLIED HERE: Must use useState for state variables
     const [loading, setLoading] = useState(true);
     
     const [filters, setFilters] = useState({
@@ -72,6 +89,7 @@ export default function FoundItemsList() {
                 filters={filters} 
                 onFilterChange={handleFilterChange} 
                 listType="found" 
+                locationOptions={GIETU_LOCATION_OPTIONS}
             />
 
             <div className="mt-8">
@@ -82,9 +100,8 @@ export default function FoundItemsList() {
                         </p>
                         <p className="text-sm text-gray-400">Try broadening your search criteria.</p>
                         
-                        {/* 🔑 FINAL LINK: Guide user to report their item as LOST */}
                         <p className="mt-4 text-base">
-                            <span className="font-semibold text-gray-700">Lost something? </span>
+                            <span className="font-semibold text-gray-700">Lost something? </span>
                             <Link to="/dashboard/report" className="text-blue-600 underline hover:text-blue-800 font-semibold">
                                 Report it here!
                             </Link>

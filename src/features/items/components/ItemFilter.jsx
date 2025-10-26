@@ -1,4 +1,4 @@
-// src/features/items/components/ItemFilter.jsx
+// src/features/items/components/ItemFilter.jsx (GIETU Campus Version)
 
 import React from 'react';
 
@@ -12,22 +12,21 @@ const ITEM_CATEGORIES = [
     { value: "other", label: "Other" },
 ];
 
-const CAMPUS_LOCATIONS = [
-    { value: "all", label: "All Locations" },
-    "Library Main Desk", 
-    "Student Union Cafeteria", 
-    "Engineering Building, Lab 305", 
-    "Dormitory Parking Lot A",
-    "Gymnasium Main Floor",
-];
+// ❌ REMOVED: Deleted the local hardcoded CAMPUS_LOCATIONS array.
+// The location data (GIETU_LOCATION_OPTIONS) will now be passed from the parent component.
 
 /**
  * Filter component for Lost/Found listings.
- * @param {object} filters - Current filter state { category, location }
+ * * 🔑 UPDATED: Now accepts 'locationOptions' array from the parent (e.g., LostItemsList.jsx).
+ * * @param {object} filters - Current filter state { category, location }
  * @param {function} onFilterChange - Callback to update parent state
  * @param {string} listType - 'lost' or 'found' for dynamic labels
+ * @param {array} locationOptions - Array of GIETU-specific location objects ({value, label})
  */
-export default function ItemFilter({ filters, onFilterChange, listType }) {
+export default function ItemFilter({ filters, onFilterChange, listType, locationOptions }) {
+    
+    // Fallback in case locationOptions is not passed, ensuring the app doesn't crash.
+    const locationsToUse = locationOptions || [{ value: 'all', label: 'All Locations (Error)' }];
     
     const isLost = listType === 'lost';
 
@@ -77,8 +76,13 @@ export default function ItemFilter({ filters, onFilterChange, listType }) {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white"
                 >
-                    {CAMPUS_LOCATIONS.map(loc => (
-                        <option key={loc.value || loc} value={loc.value || loc}>{loc.label || loc}</option>
+                    {/* 🔑 CRITICAL CHANGE: Use the locationsToUse prop */}
+                    {locationsToUse.map(loc => (
+                        // Your location data is now standardized as {value, label}, 
+                        // so we simplify the option key/value logic.
+                        <option key={loc.value} value={loc.value}>
+                            {loc.label}
+                        </option>
                     ))}
                 </select>
             </div>

@@ -1,10 +1,11 @@
-// src/features/items/pages/ItemDetails.jsx (FINAL AND DEFINITIVE VERSION)
+// src/features/items/pages/ItemDetails.jsx (FINAL PROFESSIONAL VERSION)
 
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getItem, updateItemStatus } from "../../../services/items.service";
 import { Button } from "../../../components/common/button";
 import { useAuth } from "../../../hooks/useAuth"; 
+import { Package, AlertTriangle, CheckCircle, MapPin, Calendar, Tag, Shield, Trash2 } from 'lucide-react'; // 🔑 ICONS ADDED
 
 // Helper to get Category label (remains unchanged)
 const getCategoryLabel = (value) => {
@@ -17,6 +18,15 @@ const getCategoryLabel = (value) => {
     ];
     return categories.find(c => c.value === value)?.label || 'Miscellaneous';
 };
+
+// Helper for Status Badge Styling
+const getStatusStyle = (status) => {
+    if (status === 'resolved') return 'bg-green-100 text-green-700';
+    if (status === 'in_review') return 'bg-yellow-100 text-yellow-700';
+    if (status === 'active_found') return 'bg-blue-100 text-blue-700';
+    return 'bg-red-100 text-red-700';
+};
+
 
 export default function ItemDetails() {
     const { itemId } = useParams();
@@ -34,10 +44,10 @@ export default function ItemDetails() {
     const isOwner = user && item && item.ownerId === user.uid;
     const isPublicItem = item && (item.status === 'active_lost' || item.status === 'active_found');
     // CRITICAL: Item type checks
-    const isFoundType = item && item.type === 'found'; 
-    const isLostType = item && item.type === 'lost';
+    const isFoundType = item && item.type === 'found'; 
+    const isLostType = item && item.type === 'lost';
 
-    // 1. Fetch Item Details 
+    // 1. Fetch Item Details 
     useEffect(() => {
         if (itemId) {
             const fetchItem = async () => {
@@ -74,7 +84,7 @@ export default function ItemDetails() {
                 setItem((prev) => ({ ...prev, status: newStatus }));
                 alert(`Status updated to ${newStatus} successfully!`);
             } else {
-                alert("Failed to update status.");
+                alert("Failed to update status. Check Firebase Rules.");
             }
         } catch (err) {
             alert("Error updating status. Check Firebase Rules.");
@@ -111,7 +121,7 @@ export default function ItemDetails() {
     if (error) return <div className="p-6 text-center text-red-500"><p>{error}</p><Link to="/dashboard/reports" className="text-blue-600 underline mt-4 block">Go back</Link></div>;
     if (!item) return <p className="text-center text-lg mt-8">Item not found.</p>;
 
-    // --- Main Render ---
+    // --- Main Render (PROFESSIONAL LAYOUT) ---
     return (
         <div className="p-6 max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-4 text-gray-800">{item.title}</h2>
@@ -122,68 +132,94 @@ export default function ItemDetails() {
                     <img
                         src={item.imageUrl}
                         alt={item.title}
-                        className="w-full max-h-96 object-contain rounded-lg mb-6 border border-gray-100"
+                        className="w-full max-h-96 object-contain rounded-lg mb-6 border border-gray-200"
                     />
                 )}
                 
-                {/* DETAILS GRID: Display all item data */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b pb-4 mb-4">
-                    <p className="text-gray-700">
-                        <span className="font-semibold text-gray-900">Type:</span> {isLostType ? 'Lost Item 😞' : 'Found Item 🙌'}
-                    </p>
-                    <p className="text-gray-700">
-                        <span className="font-semibold text-gray-900">Category:</span> {getCategoryLabel(item.category)}
-                    </p>
-                    <p className="text-gray-700">
-                        <span className="font-semibold text-gray-900">{isLostType ? 'Last Seen:' : 'Found At:'}</span> {item.location}
-                    </p>
-                    <p className="text-gray-700">
-                        <span className="font-semibold text-gray-900">Date {item.type} (Approx):</span> {item.date}
-                    </p>
-                    <p className="text-gray-700 md:col-span-2">
-                        <span className="font-semibold text-gray-900">Status:</span> 
-                        <span className={`ml-2 font-bold ${item.status === 'resolved' ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {item.status.toUpperCase().replace('_', ' ')}
-                        </span>
-                    </p>
+                {/* CRITICAL DATA SECTION */}
+                <div className="border-b pb-4 mb-6">
+                    {/* STATUS ROW (Top priority visual element) */}
+                    <div className="mb-4 flex flex-wrap gap-3 items-center">
+                        <span className="text-xl font-extrabold text-gray-900 mr-2">Status:</span>
+                        <span className={`text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1 ${getStatusStyle(item.status)}`}>
+                            {item.status === 'resolved' && <CheckCircle size={16} />}
+                            {item.status === 'in_review' && <AlertTriangle size={16} />}
+                            {(item.status === 'active_found' || item.status === 'active_lost') && <Tag size={16} />}
+                            {item.status.toUpperCase().replace(/_/g, ' ')}
+                        </span>
+                        <span className={`text-sm font-bold px-3 py-1 rounded-full ${isLostType ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                            {isLostType ? 'LOST ITEM' : 'FOUND ITEM'}
+                        </span>
+                    </div>
+
+                    {/* DETAILS GRID */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-gray-700">
+                        
+                        {/* Type & Category */}
+                        <div className="flex items-center gap-3">
+                            <Tag size={18} className="text-indigo-500" />
+                            <p>
+                                <span className="font-semibold block text-sm text-gray-500">Category</span>
+                                <span className="text-base font-medium">{getCategoryLabel(item.category)}</span>
+                            </p>
+                        </div>
+                        
+                        {/* Location */}
+                        <div className="flex items-center gap-3">
+                            <MapPin size={18} className="text-indigo-500" />
+                            <p>
+                                <span className="font-semibold block text-sm text-gray-500">{isLostType ? 'Last Seen' : 'Found At'}</span>
+                                <span className="text-base font-medium">{item.location}</span>
+                            </p>
+                        </div>
+
+                        {/* Date */}
+                        <div className="flex items-center gap-3">
+                            <Calendar size={18} className="text-indigo-500" />
+                            <p>
+                                <span className="font-semibold block text-sm text-gray-500">Date {isLostType ? 'Lost' : 'Found'}</span>
+                                <span className="text-base font-medium">{item.date}</span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 
-                {/* Description */}
-                <p className="text-gray-700 mb-6">
-                    <span className="font-semibold block mb-1 text-gray-900">Description:</span> 
-                    {item.description}
-                </p>
+                {/* Description (FULL TEXT) */}
+                <div className="mb-6 border-b pb-4">
+                    <span className="font-semibold block mb-2 text-lg text-gray-800">Description:</span> 
+                    <p className="text-gray-700 whitespace-pre-wrap">{item.description}</p>
+                </div>
 
-                {/* --- Dynamic Actions Section (FIXED PRIORITY) --- */}
-                <div className="mt-6 pt-4 border-t flex flex-col space-y-3">
+                {/* --- Dynamic Actions Section --- */}
+                <div className="mt-6 flex flex-col space-y-3">
                     
                     {/* SCENARIO A: ADMIN/OWNER ACTION (Highest Priority) */}
                     { (isAdmin || isOwner) && (
-                        <div className="flex space-x-3 justify-center border-t pt-4 mt-4">
+                        <div className="flex space-x-3 justify-center pt-4">
                             
                             {/* Resolve Button */}
                             <Button
                                 onClick={() => handleUpdateStatus("resolved")}
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                className="bg-green-600 hover:bg-green-700 text-white text-base"
                                 disabled={isUpdating || item.status === "resolved"}
                             >
-                                {isUpdating ? "Updating..." : "Mark as Resolved (Returned)"}
+                                <CheckCircle size={18} className="mr-2" /> Mark as Resolved (Returned)
                             </Button>
                             
                              {/* Revert to In Review Button (Admin Only) */}
                              {isAdmin && item.status !== "in_review" && (
                                 <Button
                                     onClick={() => handleUpdateStatus("in_review")}
-                                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                                    className="bg-yellow-600 hover:bg-yellow-700 text-white text-base"
                                     disabled={isUpdating}
                                 >
-                                    {isUpdating ? "Updating..." : "Revert to In Review"}
+                                    <AlertTriangle size={18} className="mr-2" /> Revert to In Review
                                 </Button>
                              )}
                         </div>
                     )}
                     
-                    {/* SCENARIO B: CLAIM ACTION BUTTON (Visible to Public User on FOUND Items) */}
+                    {/* SCENARIO B: CLAIM ACTION BUTTON (Visible ONLY for Found Items to Public Users) */}
                     {isFoundType && isPublicItem && !claimRequested && !isOwner && !isAdmin && !showPublicClaimForm && (
                         <Button
                             onClick={user ? () => handleClaimRequest(user.email) : () => setShowPublicClaimForm(true)}
@@ -193,14 +229,14 @@ export default function ItemDetails() {
                         </Button>
                     )}
 
-                    {/* SCENARIO C: LOST ITEM GUIDANCE (Visible to Public User on LOST Items) */}
+                    {/* SCENARIO C: LOST ITEM GUIDANCE (Guidance for public users viewing a LOST item) */}
                     {isLostType && isPublicItem && !isOwner && !isAdmin && (
                         <p className="text-center text-base font-medium text-red-700 bg-red-50 p-3 rounded">
-                            This is a **LOST ITEM** report. If you have **FOUND** this item, please go to the <Link to="/dashboard/report" className='underline'>Report Item</Link> page to log it as found.
+                            This is a **LOST ITEM** report. If you have **FOUND** this item, please go to the <Link to="/dashboard/report" className='underline font-semibold'>Report Item</Link> page to log it as found.
                         </p>
                     )}
 
-                    {/* SCENARIO D/E: FORM/MESSAGE (Rendered only when needed) */}
+                    {/* SCENARIO D/E: FORM/MESSAGE (remain unchanged) */}
                     {/* Public Claim Form */}
                     {!user && showPublicClaimForm && isFoundType && !claimRequested && (
                         <div className="bg-blue-50 p-4 rounded-lg space-y-3">
